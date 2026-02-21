@@ -1,6 +1,11 @@
 export interface User {
   id: number;
+  google_id: string;
   name: string;
+  display_name: string;
+  icon_url: string;
+  bio: string;
+  is_public: boolean;
 }
 
 export interface Event {
@@ -23,9 +28,11 @@ export interface Contribution {
 
 export interface RankingEntry {
   id: number;
-  name: string;
+  display_name: string;
+  icon_url: string;
   attendance_count: number;
   role_points: number;
+  is_public: boolean;
 }
 
 export const ROLES = [
