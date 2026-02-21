@@ -1,0 +1,5 @@
+{
+  "name": "Event Reputation",
+  "description": "A platform to track event participation and contributions, earn reputation points, and see monthly rankings.",
+  "requestFramePermissions": []
+}
