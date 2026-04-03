@@ -15,6 +15,13 @@ View your app in AI Studio: https://ai.studio/apps/5b3c7609-abcf-428a-ab14-4d57e
 
 1. Install dependencies:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+2. Copy `.env.example` to `.env.local`, then set the following values:
+   - `GEMINI_API_KEY`
+   - `APP_URL=http://localhost:3000`
+   - `GOOGLE_CLIENT_ID`
+   - `LOCAL_AUTH=true` (for local development when Google OAuth is not configured)
 3. Run the app:
    `npm run dev`
+
+### Local login fallback
+If you do not have a working Google OAuth client configured yet, local development login is supported via `/auth/local` when `LOCAL_AUTH=true`. This lets you test login and user state without a real Google account.

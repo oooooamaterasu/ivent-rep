@@ -68,6 +68,8 @@ const themeStyles = `
   }
 `;
 
+const ICON_OPTIONS = Array.from({ length: 32 }, (_, i) => `/icons/fs-dream_icon${i + 1}.png`);
+
 export default function App() {
   const [view, setView] = useState<"calendar" | "ranking">("calendar");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -76,6 +78,83 @@ export default function App() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authView, setAuthView] = useState<"login" | "register">("login");
+  const [discordLoginId, setDiscordLoginId] = useState("");
+  const [discordLoginPassword, setDiscordLoginPassword] = useState("");
+  const [registerDiscordId, setRegisterDiscordId] = useState("");
+  const [registerPassword, setRegisterPassword] = useState("");
+  const [registerDisplayName, setRegisterDisplayName] = useState("");
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  const openAuthModal = () => {
+    setAuthError(null);
+    setShowAuthModal(true);
+    setAuthView("login");
+  };
+
+  const closeAuthModal = () => {
+    setShowAuthModal(false);
+    setAuthError(null);
+    setDiscordLoginPassword("");
+    setRegisterPassword("");
+  };
+
+  const handleLogin = () => openAuthModal();
+
+  const handleGoogleLogin = async () => {
+    try {
+      const res = await fetch("/api/auth/url");
+      const { url } = await res.json();
+      window.open(url, 'google_login', 'width=500,height=650');
+    } catch (error) {
+      setAuthError("Googleログインの開始に失敗しました。");
+    }
+  };
+
+  const handleDiscordLogin = async () => {
+    setAuthError(null);
+    try {
+      const res = await fetch("/api/auth/discord/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ discord_id: discordLoginId, password: discordLoginPassword }),
+      });
+      if (!res.ok) {
+        const result = await res.json();
+        setAuthError(result.error || "Discordログインに失敗しました。");
+        return;
+      }
+      closeAuthModal();
+      fetchMe();
+    } catch (error) {
+      setAuthError("Discordログインに失敗しました。");
+    }
+  };
+
+  const handleRegisterAccount = async () => {
+    setAuthError(null);
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          discord_id: registerDiscordId,
+          password: registerPassword,
+          display_name: registerDisplayName,
+        }),
+      });
+      if (!res.ok) {
+        const result = await res.json();
+        setAuthError(result.error || "アカウント作成に失敗しました。");
+        return;
+      }
+      closeAuthModal();
+      fetchMe();
+    } catch (error) {
+      setAuthError("アカウント作成に失敗しました。");
+    }
+  };
 
   useEffect(() => {
     const styleSheet = document.createElement("style");
@@ -126,12 +205,6 @@ export default function App() {
     }
   }, [currentUser]);
 
-  const handleLogin = async () => {
-    const res = await fetch("/api/auth/url");
-    const { url } = await res.json();
-    window.open(url, 'google_login', 'width=500,height=600');
-  };
-
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     setCurrentUser(null);
@@ -169,25 +242,25 @@ export default function App() {
 
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-md border-b border-stone-100 sticky top-0 z-40">
-        <div className="max-w-5xl mx-auto px-6 h-20 flex items-center justify-between">
+        <div className="max-w-4xl mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#a2d2ff] to-[#ffb7c5] rounded-2xl flex items-center justify-center text-white shadow-sm">
-              <Trophy size={22} />
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-[#a2d2ff] to-[#ffb7c5] rounded-2xl flex items-center justify-center text-white shadow-sm">
+              <Trophy size={18} />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#4a4a4a]">Event Reputation</h1>
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight text-[#4a4a4a]">Event Reputation</h1>
           </div>
           
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 md:gap-6">
             <nav className="hidden md:flex bg-stone-100/50 p-1.5 rounded-2xl">
               <button
                 onClick={() => setView("calendar")}
-                className={`px-6 py-2 rounded-xl text-sm font-rounded transition-all ${view === "calendar" ? "bg-white shadow-soft text-[#a2d2ff]" : "text-stone-400 hover:text-stone-600"}`}
+                className={`px-4 md:px-6 py-2 rounded-xl text-sm font-rounded transition-all ${view === "calendar" ? "bg-white shadow-soft text-[#a2d2ff]" : "text-stone-400 hover:text-stone-600"}`}
               >
                 カレンダー
               </button>
               <button
                 onClick={() => setView("ranking")}
-                className={`px-6 py-2 rounded-xl text-sm font-rounded transition-all ${view === "ranking" ? "bg-white shadow-soft text-[#a2d2ff]" : "text-stone-400 hover:text-stone-600"}`}
+                className={`px-4 md:px-6 py-2 rounded-xl text-sm font-rounded transition-all ${view === "ranking" ? "bg-white shadow-soft text-[#a2d2ff]" : "text-stone-400 hover:text-stone-600"}`}
               >
                 ランキング
               </button>
@@ -199,12 +272,12 @@ export default function App() {
                   onClick={() => setShowProfileModal(true)}
                   className="flex items-center gap-2 group"
                 >
-                  <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm group-hover:border-[#a2d2ff] transition-all">
+                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-full overflow-hidden border-2 border-white shadow-sm group-hover:border-[#a2d2ff] transition-all">
                     {currentUser.icon_url ? (
                       <img src={currentUser.icon_url} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full bg-stone-100 flex items-center justify-center text-stone-400">
-                        <UserIcon size={20} />
+                        <UserIcon size={16} />
                       </div>
                     )}
                   </div>
@@ -218,22 +291,22 @@ export default function App() {
                   className="p-2 text-stone-300 hover:text-red-400 transition-colors"
                   title="ログアウト"
                 >
-                  <LogOut size={20} />
+                  <LogOut size={18} />
                 </button>
               </div>
             ) : (
               <button 
                 onClick={handleLogin}
-                className="px-6 py-2.5 bg-[#a2d2ff] text-white rounded-2xl font-rounded text-sm font-bold shadow-md shadow-[#a2d2ff]/20 hover:-translate-y-0.5 transition-all"
+                className="px-4 md:px-6 py-2 md:py-2.5 bg-[#a2d2ff] text-white rounded-2xl font-rounded text-sm font-bold shadow-md shadow-[#a2d2ff]/20 hover:-translate-y-0.5 transition-all"
               >
-                Googleでログイン
+                ログイン / アカウント作成
               </button>
             )}
           </div>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-12">
+      <main className="max-w-4xl mx-auto px-4 md:px-6 py-8 md:py-12">
         <AnimatePresence mode="wait">
           {view === "calendar" ? (
             <motion.div
@@ -243,16 +316,16 @@ export default function App() {
               exit={{ opacity: 0, y: -20 }}
             >
               <div className="bg-white rounded-[2.5rem] shadow-soft border border-stone-50 overflow-hidden">
-                <div className="p-10 border-b border-stone-50 flex items-center justify-between">
-                  <h2 className="text-2xl font-rounded font-bold text-[#4a4a4a]">
+                <div className="p-6 md:p-10 border-b border-stone-50 flex items-center justify-between">
+                  <h2 className="text-xl md:text-2xl font-rounded font-bold text-[#4a4a4a]">
                     {currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月
                   </h2>
                   <div className="flex gap-3">
-                    <button onClick={handlePrevMonth} className="w-12 h-12 flex items-center justify-center hover:bg-stone-50 rounded-2xl transition-colors text-stone-400">
-                      <ChevronLeft size={24} />
+                    <button onClick={handlePrevMonth} className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center hover:bg-stone-50 rounded-2xl transition-colors text-stone-400">
+                      <ChevronLeft size={20} />
                     </button>
-                    <button onClick={handleNextMonth} className="w-12 h-12 flex items-center justify-center hover:bg-stone-50 rounded-2xl transition-colors text-stone-400">
-                      <ChevronRight size={24} />
+                    <button onClick={handleNextMonth} className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center hover:bg-stone-50 rounded-2xl transition-colors text-stone-400">
+                      <ChevronRight size={20} />
                     </button>
                   </div>
                 </div>
@@ -334,11 +407,156 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      <footer className="max-w-5xl mx-auto px-6 py-12 text-center">
+      <AnimatePresence>
+        {showAuthModal && (
+          <AuthModal
+            view={authView}
+            discordLoginId={discordLoginId}
+            discordLoginPassword={discordLoginPassword}
+            registerDiscordId={registerDiscordId}
+            registerPassword={registerPassword}
+            registerDisplayName={registerDisplayName}
+            authError={authError}
+            onClose={closeAuthModal}
+            onChangeView={setAuthView}
+            onDiscordLogin={handleDiscordLogin}
+            onRegister={handleRegisterAccount}
+            onDiscordLoginIdChange={setDiscordLoginId}
+            onDiscordLoginPasswordChange={setDiscordLoginPassword}
+            onRegisterDiscordIdChange={setRegisterDiscordId}
+            onRegisterPasswordChange={setRegisterPassword}
+            onRegisterDisplayNameChange={setRegisterDisplayName}
+          />
+        )}
+      </AnimatePresence>
+
+      <footer className="max-w-4xl mx-auto px-4 md:px-6 py-8 md:py-12 text-center">
         <p className="text-xs text-stone-300 uppercase tracking-[0.3em] font-medium">
           &copy; 2026 Event Reputation - Quiet Celebration
         </p>
       </footer>
+    </div>
+  );
+}
+
+function AuthModal({
+  view,
+  discordLoginId,
+  discordLoginPassword,
+  registerDiscordId,
+  registerPassword,
+  registerDisplayName,
+  authError,
+  onClose,
+  onChangeView,
+  onDiscordLogin,
+  onRegister,
+  onDiscordLoginIdChange,
+  onDiscordLoginPasswordChange,
+  onRegisterDiscordIdChange,
+  onRegisterPasswordChange,
+  onRegisterDisplayNameChange,
+}: {
+  view: "login" | "register";
+  discordLoginId: string;
+  discordLoginPassword: string;
+  registerDiscordId: string;
+  registerPassword: string;
+  registerDisplayName: string;
+  authError: string | null;
+  onClose: () => void;
+  onChangeView: (view: "login" | "register") => void;
+  onDiscordLogin: () => void;
+  onRegister: () => void;
+  onDiscordLoginIdChange: (value: string) => void;
+  onDiscordLoginPasswordChange: (value: string) => void;
+  onRegisterDiscordIdChange: (value: string) => void;
+  onRegisterPasswordChange: (value: string) => void;
+  onRegisterDisplayNameChange: (value: string) => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/20 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        className="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm md:max-w-md overflow-hidden border border-stone-50"
+      >
+        <div className="p-4 md:p-5 border-b border-stone-100 flex items-center justify-between gap-4">
+          <div>
+            <h3 className="text-xl md:text-2xl font-rounded font-bold text-[#4a4a4a]">{view === "login" ? "Discord でログイン" : "新規アカウント作成"}</h3>
+            <p className="mt-1 text-stone-500 text-sm">
+              {view === "login"
+                ? "Discord ID でログインします。パスワードは任意です。"
+                : "Discord ID で新しいアカウントを作成します。パスワードは任意です。"}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-stone-300 hover:text-stone-500 transition-colors">閉じる</button>
+        </div>
+
+        <div className="p-4 md:p-5 space-y-4">
+          <div className="flex gap-2">
+            <button
+              onClick={() => onChangeView("login")}
+              className={`flex-1 rounded-2xl px-4 py-2 text-sm font-bold ${view === "login" ? "bg-[#a2d2ff] text-white" : "bg-stone-100 text-stone-500 hover:bg-stone-200"}`}
+            >
+              ログイン
+            </button>
+            <button
+              onClick={() => onChangeView("register")}
+              className={`flex-1 rounded-2xl px-4 py-2 text-sm font-bold ${view === "register" ? "bg-[#ffb7c5] text-white" : "bg-stone-100 text-stone-500 hover:bg-stone-200"}`}
+            >
+              アカウント作成
+            </button>
+          </div>
+
+          <div className="rounded-2xl bg-stone-50 p-4">
+            <label className="block text-xs font-bold uppercase tracking-[0.3em] text-stone-400 mb-2">Discord ID</label>
+            <input
+              value={view === "login" ? discordLoginId : registerDiscordId}
+              onChange={(e) => view === "login" ? onDiscordLoginIdChange(e.target.value) : onRegisterDiscordIdChange(e.target.value)}
+              className="w-full rounded-2xl border border-stone-200 bg-white p-3 text-sm focus:outline-none focus:border-[#a2d2ff]/30 transition-all"
+              placeholder="discord_id#0000"
+            />
+          </div>
+
+          {view === "register" && (
+            <div className="rounded-2xl bg-stone-50 p-4">
+              <label className="block text-xs font-bold uppercase tracking-[0.3em] text-stone-400 mb-2">表示名</label>
+              <input
+                value={registerDisplayName}
+                onChange={(e) => onRegisterDisplayNameChange(e.target.value)}
+                className="w-full rounded-2xl border border-stone-200 bg-white p-3 text-sm focus:outline-none focus:border-[#ffb7c5]/30 transition-all"
+                placeholder="表示名を入力（任意）"
+              />
+            </div>
+          )}
+
+          <div className="rounded-2xl bg-stone-50 p-4">
+            <label className="block text-xs font-bold uppercase tracking-[0.3em] text-stone-400 mb-2">パスワード</label>
+            <input
+              type="password"
+              value={view === "login" ? discordLoginPassword : registerPassword}
+              onChange={(e) => view === "login" ? onDiscordLoginPasswordChange(e.target.value) : onRegisterPasswordChange(e.target.value)}
+              className="w-full rounded-2xl border border-stone-200 bg-white p-3 text-sm focus:outline-none focus:border-[#a2d2ff]/30 transition-all"
+              placeholder="パスワード（任意）"
+            />
+          </div>
+
+          {authError && (
+            <div className="rounded-2xl bg-red-50 border border-red-200 p-3 text-sm text-red-600">
+              {authError}
+            </div>
+          )}
+
+          <button
+            onClick={view === "login" ? onDiscordLogin : onRegister}
+            className="w-full rounded-2xl bg-[#4f46e5] px-4 py-3 text-sm font-bold text-white shadow-lg shadow-[#4f46e5]/20 hover:bg-[#5b4de5] transition-all"
+          >
+            {view === "login" ? "Discord ログイン" : "アカウントを作成する"}
+          </button>
+        </div>
+      </motion.div>
     </div>
   );
 }
@@ -359,15 +577,15 @@ function RankingView({ month }: { month: string }) {
       exit={{ opacity: 0, y: -20 }}
       className="bg-white rounded-[2.5rem] shadow-soft border border-stone-50 overflow-hidden"
     >
-      <div className="p-10 border-b border-stone-50">
-        <h2 className="text-2xl font-rounded font-bold text-[#4a4a4a]">今月のランキング - {month}</h2>
+      <div className="p-6 md:p-10 border-b border-stone-50">
+        <h2 className="text-xl md:text-2xl font-rounded font-bold text-[#4a4a4a]">今月のランキング - {month}</h2>
       </div>
       <div className="divide-y divide-stone-50">
         {ranking.length === 0 ? (
           <div className="p-20 text-center text-stone-300 font-medium italic">まだデータがありません</div>
         ) : (
           ranking.map((entry, index) => (
-            <div key={entry.id} className="p-6 flex items-center justify-between hover:bg-stone-50/50 transition-colors">
+            <div key={entry.id} className="p-4 md:p-6 flex items-center justify-between hover:bg-stone-50/50 transition-colors">
               <div className="flex items-center gap-6">
                 <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-rounded font-bold text-sm shadow-sm ${
                   index === 0 ? 'bg-[#f9d423] text-white' : 
@@ -377,7 +595,7 @@ function RankingView({ month }: { month: string }) {
                   {index + 1}
                 </div>
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm">
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden border-2 border-white shadow-sm">
                     {entry.icon_url ? (
                       <img src={entry.icon_url} alt="" className="w-full h-full object-cover" />
                     ) : (
@@ -394,8 +612,8 @@ function RankingView({ month }: { month: string }) {
                   </div>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-2xl font-rounded font-bold text-[#a2d2ff]">{entry.role_points}</div>
+                <div className="text-right">
+                <div className="text-xl md:text-2xl font-rounded font-bold text-[#a2d2ff]">{entry.role_points}</div>
                 <div className="text-[10px] uppercase tracking-[0.2em] font-bold text-stone-300">Points</div>
               </div>
             </div>
@@ -450,22 +668,22 @@ function EventModal({ event, user, contribution, onClose, onSave, onLogin }: {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-stone-900/10 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-6 bg-stone-900/10 backdrop-blur-sm">
       <motion.div 
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden border border-stone-50"
+        className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-sm md:max-w-md lg:max-w-lg overflow-hidden border border-stone-50"
       >
-        <div className="p-10 border-b border-stone-50 relative">
-          <div className="absolute top-8 right-8 flex gap-2">
-            <Star size={20} className="text-[#f9d423] opacity-30" />
-            <Crown size={20} className="text-[#a2d2ff] opacity-30" />
+        <div className="p-6 md:p-8 lg:p-10 border-b border-stone-50 relative">
+          <div className="absolute top-6 md:top-8 right-6 md:right-8 flex gap-2">
+            <Star size={16} className="text-[#f9d423] opacity-30" />
+            <Crown size={16} className="text-[#a2d2ff] opacity-30" />
           </div>
           <div className="flex justify-between items-start mb-4">
-            <h3 className="text-3xl font-rounded font-bold text-[#4a4a4a] leading-tight">{event.title}</h3>
+            <h3 className="text-2xl md:text-3xl font-rounded font-bold text-[#4a4a4a] leading-tight">{event.title}</h3>
             <button onClick={onClose} className="text-stone-300 hover:text-stone-500 transition-colors">
-              <Plus className="rotate-45" size={28} />
+              <Plus className="rotate-45" size={24} />
             </button>
           </div>
           <div className="flex items-center gap-3 text-stone-400 text-sm font-medium">
@@ -475,15 +693,15 @@ function EventModal({ event, user, contribution, onClose, onSave, onLogin }: {
           <p className="mt-6 text-stone-500 leading-relaxed italic">{event.description}</p>
         </div>
 
-        <div className="p-10 space-y-8 max-h-[50vh] overflow-y-auto custom-scrollbar">
+        <div className="p-6 md:p-8 lg:p-10 space-y-6 md:space-y-8 max-h-[60vh] md:max-h-[70vh] overflow-y-auto custom-scrollbar">
           {!user ? (
             <div className="bg-stone-50 rounded-3xl p-8 text-center">
               <p className="text-stone-500 font-medium mb-6">貢献を記録するにはログインが必要です</p>
               <button 
                 onClick={onLogin}
-                className="px-8 py-3 bg-[#a2d2ff] text-white rounded-2xl font-rounded font-bold shadow-lg shadow-[#a2d2ff]/20 hover:-translate-y-0.5 transition-all"
+                className="px-6 md:px-8 py-3 bg-[#a2d2ff] text-white rounded-2xl font-rounded font-bold shadow-lg shadow-[#a2d2ff]/20 hover:-translate-y-0.5 transition-all"
               >
-                Googleでログイン
+                ログイン / アカウント作成
               </button>
             </div>
           ) : (
@@ -548,10 +766,10 @@ function EventModal({ event, user, contribution, onClose, onSave, onLogin }: {
           )}
         </div>
 
-        <div className="p-10 bg-stone-50/50 border-t border-stone-50 flex gap-4">
+        <div className="p-6 md:p-8 lg:p-10 bg-stone-50/50 border-t border-stone-50 flex gap-4">
           <button 
             onClick={onClose}
-            className="flex-1 px-6 py-4 rounded-2xl font-rounded font-bold text-stone-400 hover:bg-stone-100 transition-colors"
+            className="flex-1 px-4 md:px-6 py-3 md:py-4 rounded-2xl font-rounded font-bold text-stone-400 hover:bg-stone-100 transition-colors"
           >
             キャンセル
           </button>
@@ -559,7 +777,7 @@ function EventModal({ event, user, contribution, onClose, onSave, onLogin }: {
             <button 
               onClick={handleSave}
               disabled={isSaving}
-              className="flex-1 px-6 py-4 rounded-2xl font-rounded font-bold bg-[#ffb7c5] text-white hover:bg-[#ffb7c5]/90 hover:-translate-y-0.5 transition-all shadow-lg shadow-[#ffb7c5]/20 disabled:opacity-50"
+              className="flex-1 px-4 md:px-6 py-3 md:py-4 rounded-2xl font-rounded font-bold bg-[#ffb7c5] text-white hover:bg-[#ffb7c5]/90 hover:-translate-y-0.5 transition-all shadow-lg shadow-[#ffb7c5]/20 disabled:opacity-50"
             >
               {isSaving ? "保存中..." : "記録を保存する"}
             </button>
@@ -603,24 +821,24 @@ function ProfileModal({ user, onClose, onSave }: {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-stone-900/10 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-6 bg-stone-900/10 backdrop-blur-sm">
       <motion.div 
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden border border-stone-50"
+        className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-sm md:max-w-md lg:max-w-lg overflow-hidden border border-stone-50"
       >
-        <div className="p-10 border-b border-stone-50 flex justify-between items-center">
+        <div className="p-6 md:p-8 lg:p-10 border-b border-stone-50 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <Settings size={22} className="text-[#a2d2ff]" />
-            <h3 className="text-2xl font-rounded font-bold text-[#4a4a4a]">プロフィール編集</h3>
+            <Settings size={20} className="text-[#a2d2ff]" />
+            <h3 className="text-xl md:text-2xl font-rounded font-bold text-[#4a4a4a]">プロフィール編集</h3>
           </div>
           <button onClick={onClose} className="text-stone-300 hover:text-stone-500 transition-colors">
-            <Plus className="rotate-45" size={28} />
+            <Plus className="rotate-45" size={24} />
           </button>
         </div>
 
-        <div className="p-10 space-y-8">
+        <div className="p-6 md:p-8 lg:p-10 space-y-6 md:space-y-8">
           <div>
             <label className="block font-rounded font-bold text-[#4a4a4a] mb-3">表示名</label>
             <input 
@@ -641,6 +859,19 @@ function ProfileModal({ user, onClose, onSave }: {
               className="w-full bg-stone-50 border-2 border-stone-50 rounded-2xl p-4 text-sm focus:outline-none focus:border-[#a2d2ff]/30 transition-all"
               placeholder="https://..."
             />
+            <p className="mt-2 text-xs text-stone-400">または以下からアイコンを選択してください。</p>
+            <div className="mt-4 grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 max-h-32 md:max-h-40 overflow-y-auto pb-2">
+              {ICON_OPTIONS.map((src, index) => (
+                <button
+                  key={src}
+                  type="button"
+                  onClick={() => setIconUrl(src)}
+                  className={`rounded-2xl border p-1 transition-all ${iconUrl === src ? 'border-[#a2d2ff] bg-[#a2d2ff]/10' : 'border-stone-200 bg-white hover:border-stone-300'}`}
+                >
+                  <img src={src} alt={`icon-${index + 1}`} className="h-10 w-10 object-cover rounded-xl" />
+                </button>
+              ))}
+            </div>
           </div>
 
           <div>
@@ -667,17 +898,17 @@ function ProfileModal({ user, onClose, onSave }: {
           </div>
         </div>
 
-        <div className="p-10 bg-stone-50/50 border-t border-stone-50 flex gap-4">
+        <div className="p-6 md:p-8 lg:p-10 bg-stone-50/50 border-t border-stone-50 flex gap-4">
           <button 
             onClick={onClose}
-            className="flex-1 px-6 py-4 rounded-2xl font-rounded font-bold text-stone-400 hover:bg-stone-100 transition-colors"
+            className="flex-1 px-4 md:px-6 py-3 md:py-4 rounded-2xl font-rounded font-bold text-stone-400 hover:bg-stone-100 transition-colors"
           >
             キャンセル
           </button>
           <button 
             onClick={handleSave}
             disabled={isSaving}
-            className="flex-1 px-6 py-4 rounded-2xl font-rounded font-bold bg-[#a2d2ff] text-white hover:bg-[#a2d2ff]/90 hover:-translate-y-0.5 transition-all shadow-lg shadow-[#a2d2ff]/20 disabled:opacity-50"
+            className="flex-1 px-4 md:px-6 py-3 md:py-4 rounded-2xl font-rounded font-bold bg-[#a2d2ff] text-white hover:bg-[#a2d2ff]/90 hover:-translate-y-0.5 transition-all shadow-lg shadow-[#a2d2ff]/20 disabled:opacity-50"
           >
             {isSaving ? "保存中..." : "保存する"}
           </button>

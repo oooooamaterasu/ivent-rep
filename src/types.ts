@@ -1,10 +1,11 @@
 export interface User {
   id: number;
-  google_id: string;
+  google_id: string | null;
+  discord_id?: string | null;
   name: string;
   display_name: string;
-  icon_url: string;
-  bio: string;
+  icon_url: string | null;
+  bio: string | null;
   is_public: boolean;
 }
 
